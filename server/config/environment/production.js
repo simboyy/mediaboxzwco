@@ -12,7 +12,7 @@ module.exports = {
 
         // MongoDB connection options
         mongo: {
-                uri: process.env.OPENSHIFT_MONGODB_DB_URL + process.env.OPENSHIFT_APP_NAME || process.env.MONGODB_URI || process.env.MONGOHQ_URL || 'mongodb://localhost/materialshop'
+                uri: process.env.OPENSHIFT_MONGODB_DB_URL + process.env.OPENSHIFT_APP_NAME || process.env.MONGODB_URI || process.env.MONGOHQ_URL || 'mongodb://localhost/mediaboxzim'
         },
 
         // Seed database on startup

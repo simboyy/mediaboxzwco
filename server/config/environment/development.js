@@ -7,7 +7,7 @@ module.exports = {
 
   // MongoDB connection options
   mongo: {
-    uri: 'mongodb://127.0.0.1/materialshop-dev'
+    uri: 'mongodb://localhost/mediaboxzim'
   },
 
   // Seed database on startup

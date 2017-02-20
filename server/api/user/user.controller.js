@@ -167,12 +167,12 @@ function create(req, res) {
     /**
      * Creates send welcome  email
      */
-    if (user.role == 'user') {
+    if (user.role === 'user') {
       mailer.send(_environment2.default.mailOptions.signUpAdvertiser(res.req.body));
-    } else if (user.role == 'manager') {
+    } else if (user.role === 'manager') {
       mailer.send(_environment2.default.mailOptions.signUpPublisher(res.req.body));
     } else {
-      mailer.send(_environment2.default.mailOptions.signUpPublisher(res.req.body));
+      mailer.send(_environment2.default.mailOptions.signUpAdvertiser(res.req.body));
     }
     var token = _jsonwebtoken2.default.sign({ _id: user._id }, _environment2.default.secrets.session, {
       expiresIn: 60 * 60 * 5

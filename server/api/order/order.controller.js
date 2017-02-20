@@ -65,6 +65,7 @@ function orderUpdated(res, statusCode) {
 }
 
 function respondWithResult(res, statusCode) {
+  console.log(res);
   statusCode = statusCode || 200;
   return function (entity) {
     if (entity) {
@@ -121,7 +122,7 @@ function myOrders(req, res) {
 
 // Get all orders for a publisher
 function pubOrders(req, res) {
-  _order2.default.find({ email: req.user.email }, function (err, orders) {
+  _order2.default.find({ 'items.publisheruid': req.user.email }, function (err, orders) {
     if (err) {
       return handleError(res, err);
     }
@@ -151,6 +152,7 @@ function create(req, res) {
 
 // Updates an existing Order in the DB
 function update(req, res) {
+
   if (req.body._id) {
     delete req.body._id;
   }

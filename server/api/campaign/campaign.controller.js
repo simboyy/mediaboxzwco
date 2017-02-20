@@ -73,8 +73,14 @@ function respondWithResult(res, statusCode) {
 }
 
 function saveUpdates(updates) {
+
+  //console.log(updates);
+
+
   return function (entity) {
+
     var updated = _lodash2.default.merge(entity, updates);
+
     return updated.save().then(function (updated) {
       return updated;
     });
@@ -110,7 +116,18 @@ function handleError(res, statusCode) {
 
 // Get all Campaigns by a user
 function myCampaigns(req, res) {
-  _campaign2.default.find({ 'items.advertiser.email': req.user.email }, function (err, campaigns) {
+  function isJson(str) {
+    try {
+      str = JSON.parse(str);
+    } catch (e) {
+      str = str;
+    }
+    return str;
+  }
+  var q = isJson(req.query.where);
+  console.log(q);
+
+  _campaign2.default.find(q, function (err, campaigns) {
     if (err) {
       return handleError(res, err);
     }
@@ -120,7 +137,18 @@ function myCampaigns(req, res) {
 
 // Get all Campaigns by a publisher
 function pubCampaigns(req, res) {
-  _campaign2.default.find({ email: req.user.email }, function (err, campaigns) {
+  function isJson(str) {
+    try {
+      str = JSON.parse(str);
+    } catch (e) {
+      str = str;
+    }
+    return str;
+  }
+  var q = isJson(req.query.where);
+  console.log(q);
+
+  _campaign2.default.find(q, function (err, campaigns) {
     if (err) {
       return handleError(res, err);
     }
@@ -156,7 +184,14 @@ function update(req, res) {
   if (req.body.__v) {
     delete req.body.__v;
   }
-  return _campaign2.default.findById(req.params.id).exec().then(handleEntityNotFound(res)).then(saveUpdates(req.body)).then(campaignUpdated(res)).catch(handleError(res));
+  console.log(req.body);
+
+  if (!req.body.status) {
+
+    _campaign2.default.update({ _id: req.params.id, "items.name": req.body.items.name }, { $set: { "items.$.price": req.body.items.price, "items.$.category": req.body.items.category, "items.$.quantity": req.body.items.quantity } }).exec().then(handleEntityNotFound(res)).then(CampaignUpdated(res)).catch(handleError(res));
+  } else if (req.body.status) {
+    return _campaign2.default.findById(req.params.id).exec().then(handleEntityNotFound(res)).then(saveUpdates(req.body)).then(CampaignUpdated(res)).catch(handleError(res));
+  }
 }
 
 // Deletes a Campaign from the DB

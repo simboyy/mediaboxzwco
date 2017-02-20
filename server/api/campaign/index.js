@@ -8,8 +8,8 @@ var router = express.Router();
 
 router.get('/my', auth.isAuthenticated(), controller.myCampaigns);
 router.get('/pub', auth.isAuthenticated(), controller.pubCampaigns);
-router.get('/', auth.hasRole('manager'), controller.index);
-router.get('/:id', auth.hasRole('manager'), controller.show);
+router.get('/', controller.index);
+router.get('/:id', controller.show);
 router.post('/', auth.isAuthenticated(), controller.create);
 router.put('/:id', auth.hasRole('manager'), controller.update);
 router.patch('/:id', auth.hasRole('manager'), controller.update);

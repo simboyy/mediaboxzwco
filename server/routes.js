@@ -21,6 +21,7 @@ exports.default = function (app) {
   app.use('/api/media', require('./api/media'));
   app.use('/api/invoices', require('./api/invoice'));
   app.use('/api/features', require('./api/feature'));
+  app.use('/api/keyfeatures', require('./api/keyfeature'));
   app.use('/api/statistics', require('./api/statistic'));
   app.use('/api/coupons', require('./api/coupon'));
   app.use('/api/countries', require('./api/country'));

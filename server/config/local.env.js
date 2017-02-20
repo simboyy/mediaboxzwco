@@ -21,10 +21,13 @@ module.exports = {
   SENDGRID_APIKEY: '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', // Used for sending emails
 
   PAYPAL_MODE: 'sandbox', //sandbox or live
-  PAYPAL_CLIENT_ID: "YOUR_PAYPAL_CLIENT_ID",
-  PAYPAL_CLIENT_SECRET: "YOUR_PAYPAL_CLIENT_SECRET",
+  PAYPAL_CLIENT_ID: 'ARYkOSdmccmnPqcbTmpPF6TA-AQS7zIEt7NCBNEY--Y1doAnulMTGLb4fdIB4x5xCyckqhhIc92568fu',
+  PAYPAL_CLIENT_SECRET: 'EBnfwROb_fv8YcqN_Nwm9mjLVnEloHaKpVLJbc4RTdkKLB4KdAp1fdRdHO3paf1_Kovnj-BgnZLW5iJd',
 
   STRIPE_APIKEY: 'sk_test_REST_OF_YOUR_KEY',
+
+  PAYNOW_INTERGRATION_ID: '2230',
+  PAYNOW_INTERGRATION_KEY: '14d97a24-4ec8-4a81-ae7b-d28a18a07b3a',
 
   // Control debug level for modules using visionmedia/debug
   DEBUG: ''
