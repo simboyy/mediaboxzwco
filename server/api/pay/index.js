@@ -303,6 +303,7 @@ router.get('/prepare', function (req, res) {
             var PS_FAILED = "failed";
             var PS_PAID = "paid";
             var PS_AWAITING_DELIVERY = "awaiting delivery";
+            var PS_AWAITING_DELIVERY_2 = "Awaiting+Delivery";
             var PS_DELIVERED = "delivered";
             var PS_AWAITING_REDIRECT = "awaiting redirect";
             var SITE_URL = "http://www.mediabox.co.zw";
@@ -331,11 +332,6 @@ router.get('/prepare', function (req, res) {
                 } else {
 
                     var msg = ParseMsg(body);
-
-                    console.log(msg['browserurl']);
-                    console.log(msg['pollurl']);
-                    console.log(msg['status']);
-                    console.log(msg['hash']);
 
                     //first check status, take appropriate action
                     if (msg["status"] === PS_ERROR) {
@@ -377,7 +373,7 @@ router.get('/prepare', function (req, res) {
                                 status: status,
                                 items: data,
                                 payment: { id: orderNo, state: "Created", cart: null, pollurl: pollUrl, email: options.email },
-                                amount: { total: subtotal / 100, currency: options.currency_code },
+                                amount: { total: subtotal , currency: options.currency_code },
                                 exchange_rate: options.exchange_rate,
                                 created: Date.now(),
                                 payment_method: 'Pay Now'
@@ -446,85 +442,130 @@ router.get('/process', function (req, res) {
 
 router.get('/gettingbackfrompaynow', function (req, res) {
 
-    var mailParams = {
-        id: 'test',
-        to: 'smkorera@gmail.com',
-        orderNo: req,
-        status: '',
-        payment_method: '',
-        amount: '',
-        address: ''
-    };
-
-    sendmail.send(config.mailOptions.orderPlaced(mailParams));
-
     //Get locally saved  order settings
-    //et latest order from db
-    var paymentId = req.query.paynowreference;
-    var pollurl = req.query.pollurl;
+    //get latest order from db
+    //
+    //***Todo add userid in query***
+    //
+    /**Define constants ***/
 
-    request({
-        url: pollurl,
-        method: "POST",
-        json: true, // <--Very important!!!
-        body: ''
-    }, function (error, response, body) {
+            var PS_ERROR = "Error";
+            var PS_OK = "Ok";
+            var PS_CREATED_BUT_NOT_PAID = "created but not paid";
+            var PS_CANCELLED = "cancelled";
+            var PS_FAILED = "failed";
+            var PS_PAID = "paid";
+            var PS_AWAITING_DELIVERY = "awaiting delivery";
+            var PS_AWAITING_DELIVERY_2 = "Awaiting+Delivery";
+            var PS_DELIVERED = "delivered";
+            var PS_AWAITING_REDIRECT = "awaiting redirect";
+            var SITE_URL = "http://www.mediabox.co.zw";
 
-        if (response) {
+    _order2.default.findOne({}).sort('-created_at').exec().then(function (doc) {
 
-            //close connection  
-            var msg = ParseMsg(response.body);
+  
 
-            var MerchantKey = 'b717de9d-d716-49ae-abae-df8279ceda9b';
-            var validateHash = CreateHash(msg, MerchantKey);
+        var paymentId = doc.payment.id;
+        var pollurl = doc.payment.pollurl;
 
-            if (validateHash != msg["hash"]) {
-                //header("Location: $checkout_url");  
-            } else {
-                /***** IMPORTANT **** 
-                On Paynow, payment status has changed, say from Awaiting Delivery to Delivered 
-                 
-                    Here is where you 
-                    1. Update your local shopping cart of Payment Status etc and do appropriate actions here, Save data to DB 
-                    2. Email, SMS Notifications to customer, merchant etc 
-                    3. Any other thing 
-                 
-                *** END OF IMPORTANT ****/
+        //poll paynow for payment update
 
-                // console.log('payment success', payment);
-                if (msg["status"] === PS_PAID) {
-                    // Save order details so that if no response received, status will Awaiting Payment
-                    _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: 'Paid' }, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec().then(function (doc) {
+        request({
+            url: pollurl,
+            method: "POST",
+            json: true, // <--Very important!!!
+            body: ''
+        }, function (error, response, body) {
 
-                        var mailParams = doc;
+             if (response) {
 
-                        mailParams.id = msg["paynowreference"];
-                        mailParams.to = doc.email;
+                //close connection  
+                var msg = ParseMsg(body);
 
-                        sendmail.send(config.mailOptions.orderPlaced(mailParams));
-                    }).then(function (err) {
-                        if (err) {
-                            // console.log('Could not find the payment reference',err);
-                            sendmail.send(config.mailOptions.orderPlaced(mailParams));
-                            string = encodeURIComponent("Payment Received");
-                            res.redirect('/order?id=' + msg["paynowreference"] + '&msg=' + string);
-                        }
-                    });
-                } else {
-                    _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: msg["status"] }, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec();
-                    var string = encodeURIComponent('Payment Not Approved');
+              
+                    /***** IMPORTANT **** 
+                    On Paynow, payment status has changed, say from Awaiting Delivery to Delivered 
+                     
+                        Here is where you 
+                        1. Update your local shopping cart of Payment Status etc and do appropriate actions here, Save data to DB 
+                        2. Email, SMS Notifications to customer, merchant etc 
+                        3. Any other thing 
+                     
+                    *** END OF IMPORTANT ****/
 
-                    res.redirect('/checkout?id=' + msg["paynowreference"] + '&msg=' + string);
-                }
+                     console.log(msg['status']);
+                    if (msg["status"] === PS_PAID || msg['status'] === PS_AWAITING_DELIVERY || msg['status'] === PS_DELIVERED||msg['status'] === 'Awaiting+Delivery') {
+                        // Save order details so that if no response received, status will Awaiting Payment
+                        _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: 'Paid' ,'payment.id':msg["paynowreference"]}, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec().then(function (result) {
+
+                            console.log('#################getting updated doc and from paynow##############');
+                            console.log(result);
+                            var mailParams = result;
+
+                            mailParams.id = msg["paynowreference"];
+                            mailParams.to = result.email;
+
+                            sendmail.send(config.mailOptions.orderUpdated(mailParams));
+
+                            
+                        }).then(function (err) {
+                            if (err) {
+                                // console.log('Could not find the payment reference',err);
+                                var string = encodeURIComponent("Payment Received");
+                                res.redirect('/order?id=' + msg["paynowreference"] + '&msg=' + string);
+                            }
+                        });
+
+
+                      var string = encodeURIComponent("Payment Received");
+                      res.redirect('/order?id=' + msg["paynowreference"] + '&msg=' + string);
+
+                    }else if (msg['status'] === PS_CANCELLED) {
+
+                        _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: msg["status"] }, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec();
+                        var string = encodeURIComponent('Payment Cancelled');
+
+                        res.redirect('/checkout?id=' + msg["paynowreference"] + '&msg=' + string);
+                    } else {
+                        _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: msg["status"] }, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec();
+                        var string = encodeURIComponent('Payment Not Approved');
+
+                        res.redirect('/checkout?id=' + msg["paynowreference"] + '&msg=' + string);
+                    }
+                
             }
+        }); //end poll request
+
+    }).then(function (err) {
+        if (err) {
+            // console.log('Could not find the payment reference',err);
+            sendmail.send(config.mailOptions.orderPlaced(mailParams));
+            string = encodeURIComponent("Payment Received");
+            res.redirect('/order?id=' + msg["paynowreference"] + '&msg=' + string);
         }
     });
 });
 
 router.get('/paynowupdatingus', function (req, res) {
 
-    var paymentId = req.query.paynowreference;
-    var pollurl = req.query.pollurl;
+    /**Define constants ***/
+
+    console.log(req.body);
+    console.log(res.body);
+
+    var PS_ERROR = "Error";
+    var PS_OK = "Ok";
+    var PS_CREATED_BUT_NOT_PAID = "created but not paid";
+    var PS_CANCELLED = "cancelled";
+    var PS_FAILED = "failed";
+    var PS_PAID = "paid";
+    var PS_AWAITING_DELIVERY = "awaiting delivery";
+    var PS_DELIVERED = "delivered";
+    var PS_AWAITING_REDIRECT = "awaiting redirect";
+    var SITE_URL = "http://www.mediabox.co.zw";
+
+    var paymentId = res.body.paynowreference;
+    var pollurl = res.body.pollurl;
 
     request({
         url: pollurl,
@@ -541,9 +582,9 @@ router.get('/paynowupdatingus', function (req, res) {
             var MerchantKey = 'b717de9d-d716-49ae-abae-df8279ceda9b';
             var validateHash = CreateHash(msg, MerchantKey);
 
-            if (validateHash != msg["hash"]) {
-                //header("Location: $checkout_url");  
-            } else {
+            // if (validateHash != msg["hash"]) {
+            //     //header("Location: $checkout_url");  
+            // } else {
                 /***** IMPORTANT **** 
                 On Paynow, payment status has changed, say from Awaiting Delivery to Delivered 
                  
@@ -554,32 +595,46 @@ router.get('/paynowupdatingus', function (req, res) {
                  
                 *** END OF IMPORTANT ****/
 
-                // console.log('payment success', payment);
-                if (msg["status"] === PS_PAID) {
-                    // Save order details so that if no response received, status will Awaiting Payment
-                    _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: 'Paid' }, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec().then(function (doc) {
+                if (msg["status"] === PS_PAID || msg['status'] === PS_AWAITING_DELIVERY || msg['status'] === PS_DELIVERED||msg['status'] === 'Awaiting+Delivery') {
+                        // Save order details so that if no response received, status will Awaiting Payment
+                        _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: 'Paid' ,'payment.id':msg["paynowreference"]}, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec().then(function (result) {
 
-                        var mailParams = doc;
+                            console.log('#################getting updated doc and from paynow##############');
+                            console.log(result);
+                            var mailParams = result;
 
-                        mailParams.id = msg["paynowreference"];
-                        mailParams.to = doc.email;
+                            mailParams.id = msg["paynowreference"];
+                            mailParams.to = result.email;
 
-                        sendmail.send(config.mailOptions.orderPlaced(mailParams));
-                    }).then(function (err) {
-                        if (err) {
-                            // console.log('Could not find the payment reference',err);
-                            sendmail.send(config.mailOptions.orderPlaced(mailParams));
-                            string = encodeURIComponent("Payment Received");
-                            res.redirect('/order?id=' + msg["paynowreference"] + '&msg=' + string);
-                        }
-                    });
-                } else {
-                    _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: msg["status"] }, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec();
-                    var string = encodeURIComponent('Payment Not Approved');
+                            sendmail.send(config.mailOptions.orderUpdated(mailParams));
 
-                    //res.redirect('/checkout?id='+msg["paynowreference"]+'&msg=' + string);
-                }
-            }
+                            
+                        }).then(function (err) {
+                            if (err) {
+                                // console.log('Could not find the payment reference',err);
+                                var string = encodeURIComponent("Payment Received");
+                                //res.redirect('/order?id=' + msg["paynowreference"] + '&msg=' + string);
+                            }
+                        });
+
+
+                      var string = encodeURIComponent("Payment Received");
+                      //res.redirect('/order?id=' + msg["paynowreference"] + '&msg=' + string);
+
+                    }else if (msg['status'] === PS_CANCELLED) {
+
+                        _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: msg["status"] }, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec();
+                        var string = encodeURIComponent('Payment Cancelled');
+
+                        //res.redirect('/checkout?id=' + msg["paynowreference"] + '&msg=' + string);
+                    } else {
+                        _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: msg["status"] }, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec();
+                        var string = encodeURIComponent('Payment Not Approved');
+
+                        //res.redirect('/checkout?id=' + msg["paynowreference"] + '&msg=' + string);
+                    }
+              
+            //}
         }
     });
 });

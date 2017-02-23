@@ -30,7 +30,7 @@ _mongoose2.default.Promise = require('bluebird');
 
 
 // Connect to MongoDB
-_mongoose2.default.connect(_environment2.default.mongo.uri, _environment2.default.mongo.options);
+_mongoose2.default.connect('mongodb://simba:1994kingsss@ds135797.mlab.com:35797/mediaboxzim');
 _mongoose2.default.connection.on('error', function (err) {
   console.error('MongoDB connection error: ' + err);
   process.exit(-1);
