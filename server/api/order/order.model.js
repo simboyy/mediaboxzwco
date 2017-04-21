@@ -20,7 +20,7 @@ var OrderSchema = new _mongoose2.default.Schema({
   payment: Object,
   amount: Object,
   exchange_rate: Number,
-  items: [{ sku: String, name: String, size: String, url: String, quantity: String, mrp: String, price: String, image: String, category: String, advertiser: Object, publisher: String, publisheruid: String, uid: String, status: Object({ name: String, val: Number }) }],
+  items: [{ sku: String, name: String, size: String, url: String, quantity: Number, mrp: String, price: Number, image: String, category: String, advertiser: Object, publisher: String, publisheruid: String, uid: String, status: Object({ name: String, val: Number }) }],
   status: { type: String, default: 'Order Placed' },
   active: { type: Boolean, default: true },
   payment_method: String,

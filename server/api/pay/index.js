@@ -303,7 +303,6 @@ router.get('/prepare', function (req, res) {
             var PS_FAILED = "failed";
             var PS_PAID = "paid";
             var PS_AWAITING_DELIVERY = "awaiting delivery";
-            var PS_AWAITING_DELIVERY_2 = "Awaiting+Delivery";
             var PS_DELIVERED = "delivered";
             var PS_AWAITING_REDIRECT = "awaiting redirect";
             var SITE_URL = "http://www.mediabox.co.zw";
@@ -373,7 +372,7 @@ router.get('/prepare', function (req, res) {
                                 status: status,
                                 items: data,
                                 payment: { id: orderNo, state: "Created", cart: null, pollurl: pollUrl, email: options.email },
-                                amount: { total: subtotal , currency: options.currency_code },
+                                amount: { total: subtotal / 100, currency: options.currency_code },
                                 exchange_rate: options.exchange_rate,
                                 created: Date.now(),
                                 payment_method: 'Pay Now'
@@ -446,24 +445,11 @@ router.get('/gettingbackfrompaynow', function (req, res) {
     //get latest order from db
     //
     //***Todo add userid in query***
-    //
-    /**Define constants ***/
 
-            var PS_ERROR = "Error";
-            var PS_OK = "Ok";
-            var PS_CREATED_BUT_NOT_PAID = "created but not paid";
-            var PS_CANCELLED = "cancelled";
-            var PS_FAILED = "failed";
-            var PS_PAID = "paid";
-            var PS_AWAITING_DELIVERY = "awaiting delivery";
-            var PS_AWAITING_DELIVERY_2 = "Awaiting+Delivery";
-            var PS_DELIVERED = "delivered";
-            var PS_AWAITING_REDIRECT = "awaiting redirect";
-            var SITE_URL = "http://www.mediabox.co.zw";
+    _order2.default.findOne({}, { $sort: { 'created_at': -1 } }).exec().then(function (doc) {
 
-    _order2.default.findOne({}).sort('-created_at').exec().then(function (doc) {
-
-  
+        console.log('#################getting back from paynow##############');
+        console.log(doc);
 
         var paymentId = doc.payment.id;
         var pollurl = doc.payment.pollurl;
@@ -477,12 +463,18 @@ router.get('/gettingbackfrompaynow', function (req, res) {
             body: ''
         }, function (error, response, body) {
 
-             if (response) {
+            if (response) {
 
                 //close connection  
-                var msg = ParseMsg(body);
+                var msg = ParseMsg(response.body);
 
-              
+                var MerchantKey = 'b717de9d-d716-49ae-abae-df8279ceda9b';
+                var validateHash = CreateHash(msg, MerchantKey);
+
+                if (validateHash != msg["hash"]) {
+                    console.log('Invalid hash detected');
+                    //header("Location: $checkout_url");  
+                } else {
                     /***** IMPORTANT **** 
                     On Paynow, payment status has changed, say from Awaiting Delivery to Delivered 
                      
@@ -493,21 +485,20 @@ router.get('/gettingbackfrompaynow', function (req, res) {
                      
                     *** END OF IMPORTANT ****/
 
-                     console.log(msg['status']);
-                    if (msg["status"] === PS_PAID || msg['status'] === PS_AWAITING_DELIVERY || msg['status'] === PS_DELIVERED||msg['status'] === 'Awaiting+Delivery') {
+                    // console.log('payment success', payment);
+                    if (msg["status"] === PS_PAID || msg['status'] === PS_AWAITING_DELIVERY || msg['status'] === PS_DELIVERED) {
                         // Save order details so that if no response received, status will Awaiting Payment
-                        _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: 'Paid' ,'payment.id':msg["paynowreference"]}, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec().then(function (result) {
+                        _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: 'Paid' }, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec().then(function (doc) {
 
-                            console.log('#################getting updated doc and from paynow##############');
-                            console.log(result);
-                            var mailParams = result;
+                            var mailParams = doc;
 
                             mailParams.id = msg["paynowreference"];
-                            mailParams.to = result.email;
+                            mailParams.to = doc.email;
 
                             sendmail.send(config.mailOptions.orderUpdated(mailParams));
 
-                            
+                            var string = encodeURIComponent("Payment Received");
+                            res.redirect('/order?id=' + msg["paynowreference"] + '&msg=' + string);
                         }).then(function (err) {
                             if (err) {
                                 // console.log('Could not find the payment reference',err);
@@ -515,12 +506,7 @@ router.get('/gettingbackfrompaynow', function (req, res) {
                                 res.redirect('/order?id=' + msg["paynowreference"] + '&msg=' + string);
                             }
                         });
-
-
-                      var string = encodeURIComponent("Payment Received");
-                      res.redirect('/order?id=' + msg["paynowreference"] + '&msg=' + string);
-
-                    }else if (msg['status'] === PS_CANCELLED) {
+                    }if (msg['status'] === PS_CANCELLED) {
 
                         _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: msg["status"] }, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec();
                         var string = encodeURIComponent('Payment Cancelled');
@@ -532,7 +518,7 @@ router.get('/gettingbackfrompaynow', function (req, res) {
 
                         res.redirect('/checkout?id=' + msg["paynowreference"] + '&msg=' + string);
                     }
-                
+                }
             }
         }); //end poll request
 
@@ -548,24 +534,8 @@ router.get('/gettingbackfrompaynow', function (req, res) {
 
 router.get('/paynowupdatingus', function (req, res) {
 
-    /**Define constants ***/
-
-    console.log(req.body);
-    console.log(res.body);
-
-    var PS_ERROR = "Error";
-    var PS_OK = "Ok";
-    var PS_CREATED_BUT_NOT_PAID = "created but not paid";
-    var PS_CANCELLED = "cancelled";
-    var PS_FAILED = "failed";
-    var PS_PAID = "paid";
-    var PS_AWAITING_DELIVERY = "awaiting delivery";
-    var PS_DELIVERED = "delivered";
-    var PS_AWAITING_REDIRECT = "awaiting redirect";
-    var SITE_URL = "http://www.mediabox.co.zw";
-
-    var paymentId = res.body.paynowreference;
-    var pollurl = res.body.pollurl;
+    var paymentId = req.query.paynowreference;
+    var pollurl = req.query.pollurl;
 
     request({
         url: pollurl,
@@ -582,9 +552,9 @@ router.get('/paynowupdatingus', function (req, res) {
             var MerchantKey = 'b717de9d-d716-49ae-abae-df8279ceda9b';
             var validateHash = CreateHash(msg, MerchantKey);
 
-            // if (validateHash != msg["hash"]) {
-            //     //header("Location: $checkout_url");  
-            // } else {
+            if (validateHash != msg["hash"]) {
+                //header("Location: $checkout_url");  
+            } else {
                 /***** IMPORTANT **** 
                 On Paynow, payment status has changed, say from Awaiting Delivery to Delivered 
                  
@@ -595,46 +565,32 @@ router.get('/paynowupdatingus', function (req, res) {
                  
                 *** END OF IMPORTANT ****/
 
-                if (msg["status"] === PS_PAID || msg['status'] === PS_AWAITING_DELIVERY || msg['status'] === PS_DELIVERED||msg['status'] === 'Awaiting+Delivery') {
-                        // Save order details so that if no response received, status will Awaiting Payment
-                        _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: 'Paid' ,'payment.id':msg["paynowreference"]}, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec().then(function (result) {
+                // console.log('payment success', payment);
+                if (msg["status"] === PS_PAID) {
+                    // Save order details so that if no response received, status will Awaiting Payment
+                    _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: 'Paid' }, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec().then(function (doc) {
 
-                            console.log('#################getting updated doc and from paynow##############');
-                            console.log(result);
-                            var mailParams = result;
+                        var mailParams = doc;
 
-                            mailParams.id = msg["paynowreference"];
-                            mailParams.to = result.email;
+                        mailParams.id = msg["paynowreference"];
+                        mailParams.to = doc.email;
 
-                            sendmail.send(config.mailOptions.orderUpdated(mailParams));
+                        sendmail.send(config.mailOptions.orderPlaced(mailParams));
+                    }).then(function (err) {
+                        if (err) {
+                            // console.log('Could not find the payment reference',err);
+                            sendmail.send(config.mailOptions.orderPlaced(mailParams));
+                            string = encodeURIComponent("Payment Received");
+                            res.redirect('/order?id=' + msg["paynowreference"] + '&msg=' + string);
+                        }
+                    });
+                } else {
+                    _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: msg["status"] }, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec();
+                    var string = encodeURIComponent('Payment Not Approved');
 
-                            
-                        }).then(function (err) {
-                            if (err) {
-                                // console.log('Could not find the payment reference',err);
-                                var string = encodeURIComponent("Payment Received");
-                                //res.redirect('/order?id=' + msg["paynowreference"] + '&msg=' + string);
-                            }
-                        });
-
-
-                      var string = encodeURIComponent("Payment Received");
-                      //res.redirect('/order?id=' + msg["paynowreference"] + '&msg=' + string);
-
-                    }else if (msg['status'] === PS_CANCELLED) {
-
-                        _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: msg["status"] }, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec();
-                        var string = encodeURIComponent('Payment Cancelled');
-
-                        //res.redirect('/checkout?id=' + msg["paynowreference"] + '&msg=' + string);
-                    } else {
-                        _order2.default.findOneAndUpdate({ 'orderNo': msg["reference"] }, { status: msg["status"] }, { upsert: false, setDefaultsOnInsert: true, runValidators: true }).exec();
-                        var string = encodeURIComponent('Payment Not Approved');
-
-                        //res.redirect('/checkout?id=' + msg["paynowreference"] + '&msg=' + string);
-                    }
-              
-            //}
+                    //res.redirect('/checkout?id='+msg["paynowreference"]+'&msg=' + string);
+                }
+            }
         }
     });
 });

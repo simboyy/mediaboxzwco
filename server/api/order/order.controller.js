@@ -13,6 +13,19 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.myOrders = myOrders;
+exports.myOrdersCount = myOrdersCount;
+exports.pubCountryCustomers = pubCountryCustomers;
+exports.pubCustomers = pubCustomers;
+exports.pubProductSales = pubProductSales;
+exports.pubProductSalesCalendar = pubProductSalesCalendar;
+exports.pubProductSalesReport = pubProductSalesReport;
+exports.pubProductAverageSales = pubProductAverageSales;
+exports.pubProductQuartelySales = pubProductQuartelySales;
+exports.pubOrderDetails = pubOrderDetails;
+exports.pubOrderInformation = pubOrderInformation;
+exports.pubOrdersReport = pubOrdersReport;
+exports.pubTopSellingProducts = pubTopSellingProducts;
+exports.pubOrdersCount = pubOrdersCount;
 exports.pubOrders = pubOrders;
 exports.index = index;
 exports.show = show;
@@ -117,6 +130,234 @@ function myOrders(req, res) {
       return handleError(res, err);
     }
     return res.status(200).json(orders);
+  });
+}
+
+// Get all orders by a user
+// Count
+function myOrdersCount(req, res) {
+
+  _order2.default.find({ email: req.user.email }).count().exec(function (err, count) {
+    if (err) {
+      return handleError(res, err);
+    }
+    return res.status(200).json([{ count: count }]);
+  });
+}
+
+// Get all orders for a publisher 
+// Group By country and customers
+function pubCountryCustomers(req, res) {
+
+  _order2.default.aggregate([{ $match: { 'items.publisheruid': req.user.email } }, { $project: { _id: 0, Date: "$created_at", Value: "$amount.total", Country: "Zimbabwe" } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
+  });
+}
+
+// Get all orders for a publisher
+// Group by customers
+function pubCustomers(req, res) {
+  _order2.default.aggregate([{ $match: { 'items.publisheruid': req.user.email } }, { $project: { _id: 0, Country: "Zimbabwe", CompanyName: "$address.recipient_name" } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
+  });
+}
+
+// Get all orders for a publisher
+//Group by product
+function pubProductSales(req, res) {
+
+  _order2.default.aggregate([{ $match: { 'items.publisheruid': req.user.email } }, { $unwind: "$items" }, {
+    $group: {
+      "_id": "$items.publisher",
+      "Sales": { $push: { "Date": "$created_at", "EmployeeSales": '$items.price', "TotalSales": { $sum: '$items.price' } } }
+    }
+  }, { $project: {
+      _id: 0,
+      EmployeeID: "$_id",
+      Sales: "$Sales"
+    } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
+  });
+}
+
+// Get all orders for a publisher
+//Group by product
+// calendar
+function pubProductSalesCalendar(req, res) {
+  _order2.default.aggregate([{ $match: { 'items.publisheruid': req.user.email } }, { $unwind: "$items" }, { $project: { _id: 0, SaleID: "$orderNo", Title: "$items.publisher", Description: "$items.name", Start: "$created_at", StartTimeZone: null, End: "$created_at", EndTimeZone: null, RecurrenceRule: null, RecurrenceID: null, RecurrenceException: null, EmployeeID: "$items.publisher" } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
+  });
+}
+
+// Get all orders for a publisher
+//Group by product
+//Report
+function pubProductSalesReport(req, res) {
+  _order2.default.aggregate([{ $match: { 'items.publisheruid': req.user.email } }, { $unwind: "$items" }, {
+    $group: {
+      "_id": "$items.publisher",
+      "Sales": { $push: { Date: "$created_at", Quantity: "$items.quantity" } }
+    }
+  }, { $project: {
+      _id: 0,
+      ProductID: "$_id",
+      ProductSales: "$Sales"
+    } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
+  });
+}
+
+// Get all orders for a publisher
+// Average sales for each product
+function pubProductAverageSales(req, res) {
+  _order2.default.aggregate([{ $match: { 'items.publisheruid': req.user.email } }, { $project: { _id: 0, EmployeeID: { $arrayElemAt: ["$items", 0] }, EmployeeSales: "$amount.total", Date: "$created_at" } }, { $project: { Date: "$Date", EmployeeID: "$EmployeeID.publisher", EmployeeSales: "$EmployeeSales" } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
+  });
+}
+
+// Get all orders for a publisher
+// Quartely sales
+function pubProductQuartelySales(req, res) {
+  _order2.default.aggregate([{ $match: { 'items.publisheruid': req.user.email } }, { $unwind: "$items" }, {
+    $group: {
+      "_id": "$items.publisher",
+      "Sales": { $push: { "OrderID": "$orderNo", "OrderDate": "$created_at", "Current": "$items.price", "Target": "0" } }
+    }
+  }, { $project: {
+      _id: 0,
+      EmployeeID: "$_id",
+      Sales: "$Sales"
+    } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
+  });
+}
+
+// Get all orders for a publisher
+// OrderDetails
+function pubOrderDetails(req, res) {
+  _order2.default.aggregate([{ $match: { 'items.publisheruid': req.user.email } }, { $project: { _id: 0, orderDate: "$created_at", price: "$amount.total", country: "Zimbabwe" } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
+  });
+}
+
+// Get all orders for a publisher
+// Order Information
+function pubOrderInformation(req, res) {
+  _order2.default.aggregate([{ $match: { 'items.publisheruid': req.user.email } }, { $unwind: "$items" }, {
+    $group: {
+      "_id": "$orderNo",
+      "OrderDetails": { $push: { OrderDetailID: "$items._id", OrderID: "$orderNo", "CustomerID": "$address.recipient_name", ProductID: "$items.publisher", UnitPrice: "$items.price", Quantity: "$items.quantity", Discount: "0" } }
+    }
+  }, { $project: {
+      _id: 0,
+      OrderID: "$_id",
+      OrderDetails: "$OrderDetails"
+    } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
+  });
+}
+
+// Get all orders for a publisher
+// orders report
+function pubOrdersReport(req, res) {
+  _order2.default.aggregate([{ $match: { 'items.publisheruid': req.user.email } }, { $unwind: "$items" }, { $project: {
+      _id: 0,
+      OrderID: "$orderNo",
+      CustomerID: "$address.recipient_name",
+      ContactName: "$items.advertiser.email",
+      Freight: "",
+      ShipAddress: "$address.line1",
+      OrderDate: "$created_at",
+      ShippedDate: "$created_at",
+      ShipCountry: "Zimbabwe",
+      ShipCity: "$address.city",
+      ShipName: "$address.recipient_name",
+      EmployeeID: "$items.publisher",
+      ShipVia: "1",
+      ShipPostalCode: "$items.advertiser.email"
+    } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
+  });
+}
+
+// Get all orders for a publisher
+// Top Selling Product
+function pubTopSellingProducts(req, res) {
+  _order2.default.aggregate([{ $match: { 'items.publisheruid': req.user.email } }, { $unwind: "$items" }, { $project: {
+      _id: 0,
+      Country: "Zimbabwe",
+      ProductName: "$items.publisher",
+      Date: "$created_at",
+      Quantity: "$items.price"
+    } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
+  });
+}
+
+// Get all orders for a publisher
+// Count 
+function pubOrdersCount(req, res) {
+
+  _order2.default.find({ 'items.publisheruid': req.user.email }).count().exec(function (err, count) {
+    if (err) {
+      return handleError(res, err);
+    }
+    return res.status(200).json([{ count: count }]);
   });
 }
 

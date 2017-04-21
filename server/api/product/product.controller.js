@@ -12,6 +12,9 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.productList = productList;
+exports.productList2 = productList2;
+exports.productDetails = productDetails;
 exports.index = index;
 exports.show = show;
 exports.create = create;
@@ -101,6 +104,48 @@ exports.count = function (req, res) {
     });
   }
 };
+
+// Get product liast
+// report
+function productList(req, res) {
+
+  _product2.default.aggregate([{ $match: { 'uid': req.user.email } }, { $project: { _id: 0, EmployeeID: "$name", FirstName: "$name", EmployeeName: "$name", LastName: "$name", Title: "$name", Country: "Zimbabwe", City: "Zimbabwe", Address: "$website", HomePhone: "$phone", Notes: "$info" } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
+  });
+}
+
+// Get product liast
+// report
+function productList2(req, res) {
+
+  _product2.default.aggregate([{ $match: { 'uid': req.user.email } }, { $project: { _id: 0, value: "$name", text: "$name" } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
+  });
+}
+
+// Get product details
+// report
+function productDetails(req, res) {
+
+  _product2.default.aggregate([{ $match: { 'uid': req.user.email } }, { $unwind: "$variants" }, { $project: { _id: 0, ProductID: "$name", ProductName: "$name", Category: "$variants.name", UnitsInStock: "1", UnitsOnOrder: "0", ReorderLevel: "1" } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
+  });
+}
 
 exports.priceRange = function (req, res) {
   var q = isJson(req.query.where);

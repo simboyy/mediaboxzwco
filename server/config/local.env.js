@@ -29,6 +29,9 @@ module.exports = {
   PAYNOW_INTERGRATION_ID: '2230',
   PAYNOW_INTERGRATION_KEY: '14d97a24-4ec8-4a81-ae7b-d28a18a07b3a',
 
+  TELERIVET_API_KEY: 'm8DRXIAiyHEajBMZ0Kf6mAb6ZfUwtK5d',
+  TELERIVET_PROJECT_ID: 'PJ866bd4a877ff3d0e',
+
   // Control debug level for modules using visionmedia/debug
   DEBUG: ''
 };

@@ -13,6 +13,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.myCampaigns = myCampaigns;
+exports.pubCampaignsCalendar = pubCampaignsCalendar;
 exports.pubCampaigns = pubCampaigns;
 exports.index = index;
 exports.show = show;
@@ -39,6 +40,28 @@ var email = _interopRequireWildcard(_send);
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var telerivet = require('telerivet');
+
+function sendSMS(contact) {
+
+  var API_KEY = 'm8DRXIAiyHEajBMZ0Kf6mAb6ZfUwtK5d'; // from https://telerivet.com/api/keys
+  var PROJECT_ID = 'PJ866bd4a877ff3d0e';
+
+  var tr = new telerivet.API(API_KEY);
+
+  var project = tr.initProjectById(PROJECT_ID);
+
+  // send message
+
+  project.sendMessage({
+    to_number: '+263773439246',
+    content: 'Hello from Mediabox!'
+  }, function (err, message) {
+    if (err) throw err;
+    console.log(message);
+  });
+}
 
 function CampaignPlaced(res, statusCode) {
   res.req.body.to = res.req.body.email;
@@ -132,6 +155,20 @@ function myCampaigns(req, res) {
       return handleError(res, err);
     }
     return res.status(200).json(campaigns);
+  });
+}
+
+// Get all campaigns for a publisher
+// List all advertising spaces
+
+function pubCampaignsCalendar(req, res) {
+  Order.aggregate([{ $unwind: "$items" }, { $project: { _id: 0, title: "name", start: "$items.startDate", end: "$items.endDate", allDay: false } }], function (err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    return res.status(200).json(result);
   });
 }
 
